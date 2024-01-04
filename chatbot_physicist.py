@@ -9,7 +9,8 @@ from langchain.agents import AgentExecutor
 from langchain.prompts import MessagesPlaceholder
 from langchain.schema.messages import AIMessage, HumanMessage
 
-from tools_definitions import python_calculator
+# from tools_definitions import python_calculator
+from langchain_experimental.tools import PythonREPLTool
 
 def load_environment():
     """Load environment variables from .env file."""
@@ -17,7 +18,7 @@ def load_environment():
 
 def define_tools():
     """Define and return a list of tools."""
-    return [python_calculator]
+    return [PythonREPLTool()]
 
 def define_llm_with_tools(tools):
     """Bind LLM with tools and return."""
@@ -30,8 +31,13 @@ def create_prompt():
     MEMORY_KEY = "chat_history"
     return ChatPromptTemplate.from_messages(
         [
-            ("system", "You are very powerful assistant, who is in charge of identifying when the user needs to use"
-                       "the tool called 'python_calculator'. When the user asks for, run the method."),
+            ("system", """You are an agent designed to write and execute python code to answer questions.
+You have access to a python REPL, which you can use to execute python code.
+If you get an error, debug your code and try again.
+Only use the output of your code to answer the question. 
+You might know the answer without running any code, but you should still run the code to get the answer.
+If it does not seem like you can write code to answer the question, just return "I don't know" as the answer.
+"""),
             MessagesPlaceholder(variable_name=MEMORY_KEY),
             ("user", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -60,6 +66,8 @@ def create_agent(llm_with_tools, prompt):
     Returns:
         An agent that processes input, maintains a scratchpad, and keeps track of conversation history.
     """
+    #TODO: not sure if this is the best way of creating an agent (specifically using OpenAIFunctionsAgentOutputParser),
+    # eg it differs from https://python.langchain.com/docs/integrations/toolkits/python
     return (
         {
             "input": lambda x: x["input"],
@@ -73,7 +81,7 @@ def create_agent(llm_with_tools, prompt):
 
 def initialize_agent_executor(agent, tools, verbose):
     """Initialize and return the agent executor."""
-    return AgentExecutor(agent=agent, tools=tools, verbose=verbose)
+    return AgentExecutor(agent=agent, tools=tools, verbose=verbose, handle_parsing_errors=True)
 
 def run_chatbot(agent_executor):
     """Function to handle ongoing conversation using the agent with memory."""
@@ -103,5 +111,5 @@ if __name__ == "__main__":
     llm_with_tools = define_llm_with_tools(tools)
     prompt = create_prompt()
     agent = create_agent(llm_with_tools, prompt)
-    agent_executor = initialize_agent_executor(agent, tools, verbose=False)
+    agent_executor = initialize_agent_executor(agent, tools, verbose=True)
     run_chatbot(agent_executor)

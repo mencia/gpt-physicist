@@ -1,0 +1,5 @@
+data/*
+docs/*
+**/.idea/*
+**/__pycache__/
+*.epub

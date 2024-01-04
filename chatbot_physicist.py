@@ -9,7 +9,7 @@ from langchain.agents import AgentExecutor
 from langchain.prompts import MessagesPlaceholder
 from langchain.schema.messages import AIMessage, HumanMessage
 
-# from tools_definitions import python_calculator
+from tools_definitions import symbolic_math
 from langchain_experimental.tools import PythonREPLTool
 
 def load_environment():
@@ -20,7 +20,7 @@ def define_tools():
     """Return list of tools. The tools are:
     PythonREPLTool(): used when we need to write and execute python code.
     """
-    return [PythonREPLTool()]
+    return [PythonREPLTool(), symbolic_math]
 
 def define_llm_with_tools(tools):
     """Bind LLM with tools and return."""
@@ -28,17 +28,12 @@ def define_llm_with_tools(tools):
     llm = ChatOpenAI(model="gpt-4", temperature=0)
     return llm.bind(functions=functions)
 
-def create_prompt():
+def create_prompt(prompt):
     """Create and return a chat prompt template."""
     MEMORY_KEY = "chat_history"
     return ChatPromptTemplate.from_messages(
         [
-            ("system", """You are an agent designed to write and execute python code to answer questions.
-                        You have access to a python REPL, which you can use to execute python code.
-                        If you get an error, debug your code and try again.
-                        Only use the output of your code to answer the question. 
-                        You might know the answer without running any code, but you should still run the code to get the answer.
-                        If it does not seem like you can write code to answer the question, just return "I don't know" as the answer."""),
+            ("system", prompt),
             MessagesPlaceholder(variable_name=MEMORY_KEY),
             ("user", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
@@ -107,10 +102,26 @@ def run_chatbot(agent_executor):
 
 if __name__ == "__main__":
 
+    prompt1 = """You are an agent designed to write and execute python code to answer questions.
+    You have access to a python REPL, which you can use to execute python code.
+    If you get an error, debug your code and try again.
+    Only use the output of your code to answer the question. 
+    You might know the answer without running any code, but you should still run the code to get the answer.
+    If it does not seem like you can write code to answer the question, just return "I don't know" as the answer."""
+
+    prompt2 = """You are an agent that has access to two different tools: 1) PythonREPLTool() and 2) symbolic_math. The user will
+    specify which one to use, if the user wants to run a calculation. If the user wants to calculate something and they do not
+    specify which of the two tools to use, ask them. Do not perform calculations until the user has specified what tool to use.
+     When using PythonREPLTool(): a) If you get an error, debug your code and try again, b) only use the output of your code to answer the question and c) if it does not seem like you can write code
+    to answer the question, just return "I don't know" as the answer. When using symbolic_math, use the result to
+    respond to the user."""
+
+    prompt = prompt2
+
     load_environment()
     tools = define_tools()
     llm_with_tools = define_llm_with_tools(tools)
-    prompt = create_prompt()
+    prompt = create_prompt(prompt)
     agent = create_agent(llm_with_tools, prompt)
-    agent_executor = initialize_agent_executor(agent, tools, verbose=True)
+    agent_executor = initialize_agent_executor(agent, tools, verbose=False)
     run_chatbot(agent_executor)

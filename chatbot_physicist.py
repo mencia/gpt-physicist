@@ -1,3 +1,4 @@
+"""We define an agent chatbot that has two tools: PythonREPLTool for numerics and symbolic_math for analytics"""
 from dotenv import load_dotenv, find_dotenv
 
 from langchain.chat_models import ChatOpenAI

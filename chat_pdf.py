@@ -1,3 +1,4 @@
+"""The purpose of this script is to have gpt-4 analyse pdfs. I need it to parse equations and analyse them."""
 import openai
 import requests
 from dotenv import load_dotenv, find_dotenv
